@@ -1,5 +1,6 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 # Create your models here.
 class Course(models.Model):
@@ -10,6 +11,9 @@ class Course(models.Model):
     teacher = models.ForeignKey(User, verbose_name="Pengajar", on_delete=models.RESTRICT)
     created_at = models.DateTimeField("Dibuat pada", auto_now_add=True)
     updated_at = models.DateTimeField("Diperbarui pada", auto_now=True)
+    max_enrollments = models.PositiveIntegerField(default=9)
+    max_students = models.IntegerField(default=10)
+    max_participants = models.IntegerField(default=10)
 
     def __str__(self):
         return self.name
@@ -25,8 +29,8 @@ class Course(models.Model):
 ROLE_OPTIONS = [('std', "Siswa"), ('ast', "Asisten")]
 
 class CourseMember(models.Model):
-    course_id = models.ForeignKey(Course, verbose_name="matkul", on_delete=models.RESTRICT)
-    user_id = models.ForeignKey(User, verbose_name="siswa", on_delete=models.RESTRICT)
+    course = models.ForeignKey(Course, verbose_name="matkul", on_delete=models.RESTRICT)
+    user = models.ForeignKey(User, verbose_name="siswa", on_delete=models.RESTRICT)
     roles = models.CharField("peran", max_length=3, choices=ROLE_OPTIONS, default='std')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -43,11 +47,14 @@ class CourseContent(models.Model):
     description = models.TextField("deskripsi", default='-')
     video_url = models.CharField('URL Video', max_length=200, null=True, blank=True)
     file_attachment = models.FileField("File", null=True, blank=True)
-    course_id = models.ForeignKey(Course, verbose_name="matkul", on_delete=models.RESTRICT)
+    course = models.ForeignKey(Course, verbose_name="matkul", on_delete=models.RESTRICT)
     parent_id = models.ForeignKey("self", verbose_name="induk", 
                                 on_delete=models.RESTRICT, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    release_time = models.DateTimeField(default=timezone.now)
+    
+
 
     class Meta:
         verbose_name = "Konten Matkul"
@@ -63,10 +70,19 @@ class Comment(models.Model):
     comment = models.TextField('komentar')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+    is_approved = models.BooleanField(default=False)
+
     class Meta:
         verbose_name = "Komentar"
         verbose_name_plural = "Komentar"
 
-    def __str__(self) -> str:
-        return "Komen: "+self.member_id.user_id+"-"+self.comment
+    def __str__(self):
+        return f"Komen: {self.member_id.user_id.__str__()} - {self.comment}"
+
+class ContentCompletion(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    content = models.ForeignKey(CourseContent, on_delete=models.CASCADE)
+    completed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ['user', 'content']
