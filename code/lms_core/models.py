@@ -13,7 +13,7 @@ class Course(models.Model):
     updated_at = models.DateTimeField("Diperbarui pada", auto_now=True)
     max_enrollments = models.PositiveIntegerField(default=9)
     max_students = models.IntegerField(default=10)
-    max_participants = models.IntegerField(default=10)
+    max_participants = models.IntegerField(default=5)
 
     def __str__(self):
         return self.name

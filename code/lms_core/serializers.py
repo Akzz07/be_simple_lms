@@ -12,14 +12,16 @@ from rest_framework.exceptions import ValidationError
 class CommentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
-        fields = '__all__'
-        read_only_fields = ['is_approved']
+        fields = ['content_id', 'member_id', 'comment', 'created_at', 'is_approved']
+        read_only_fields = ['member_id', 'created_at', 'is_approved']
+        
+
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['username', 'password']
+        fields = ['username', 'password', 'email', 'first_name', 'last_name']
         
 
     def create(self, validated_data):
@@ -71,3 +73,8 @@ class ContentCompletionSerializer(serializers.ModelSerializer):
         model = ContentCompletion
         fields = ['id', 'user', 'content', 'completed_at']
         read_only_fields = ['id', 'user', 'completed_at']
+
+class UserSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'first_name', 'last_name']  # atau sesuai field user kamu

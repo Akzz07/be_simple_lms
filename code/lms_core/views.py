@@ -9,7 +9,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from drf_yasg.utils import swagger_auto_schema
 from .models import Comment, Course, CourseMember
-from .serializers import CommentSerializer, RegisterSerializer, CourseContentSerializer, EnrollmentSerializer,ContentCompletion, ContentCompletionSerializer
+from .serializers import CommentSerializer, RegisterSerializer, CourseContentSerializer, EnrollmentSerializer,ContentCompletion, ContentCompletionSerializer, UserSerializer
 from lms_core.models import CourseContent
 from django.utils import timezone
 from django.db.models import Count
@@ -23,6 +23,7 @@ from reportlab.lib.utils import ImageReader
 from reportlab.lib import colors
 from reportlab.graphics import renderPDF
 from reportlab.graphics.shapes import Drawing
+from rest_framework.permissions import AllowAny
 
 import io
 import os
@@ -62,6 +63,29 @@ def deleteData(request):
     return JsonResponse({"error": "Course tidak ditemukan"}, status=404)
 
 # --- Comment Views ---
+class CommentCreateView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    @swagger_auto_schema(request_body=CommentSerializer)
+    def post(self, request):
+        serializer = CommentSerializer(data=request.data)
+        if serializer.is_valid():
+            content_id = request.data.get("content_id")
+            try:
+                content = CourseContent.objects.get(pk=content_id)
+            except CourseContent.DoesNotExist:
+                return Response({'error': 'Content not found'}, status=404)
+
+            try:
+                member = CourseMember.objects.get(user_id=request.user, course=content.course)
+            except CourseMember.DoesNotExist:
+                return Response({'error': 'User belum tergabung dalam course ini'}, status=400)
+
+            serializer.save(member_id=member, content_id=content)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
+
+
 @api_view(['GET'])
 @permission_classes([IsAdminUser])
 def pending_comments(request):
@@ -92,6 +116,14 @@ class CommentApproveView(APIView):
         comment.status = "approved"
         comment.save()
         return Response({"message": "Comment approved"})
+    
+@api_view(['GET'])
+@permission_classes([AllowAny])
+def get_comments_for_content(request, content_id):
+    comments = Comment.objects.filter(content_id=content_id, is_approved=True)
+    serializer = CommentSerializer(comments, many=True)
+    return Response(serializer.data)
+
 
 # --- User Registration ---
 class RegisterView(APIView):
@@ -105,7 +137,6 @@ class RegisterView(APIView):
             if course:
                 CourseMember.objects.create(
                     user=user,
-                    course=course,
                     roles='std'
                 )
             return Response({"message": "User registered successfully"}, status=status.HTTP_201_CREATED)
@@ -322,3 +353,19 @@ class UserCompletedContentView(APIView):
         completions = ContentCompletion.objects.filter(user=user)
         serializer = ContentCompletionSerializer(completions, many=True)
         return Response(serializer.data)
+
+class UserProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+
+    def get(self, request):
+        serializer = UserSerializer(request.user)
+        return Response(serializer.data)
+
+    @swagger_auto_schema(request_body=UserSerializer)
+    def put(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)

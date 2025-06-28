@@ -16,7 +16,8 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path
-from lms_core.views import index, testing, addData, editData, deleteData, RegisterView, pending_comments, approve_comment, CommentApproveView, UserActivityDashboardView, AvailableContentView, CourseAnalyticsView, MarkContentCompleteView,UserCompletedContentView
+from lms_core.views import index, testing, addData, editData, deleteData, RegisterView, pending_comments, approve_comment, CommentApproveView, UserActivityDashboardView, AvailableContentView, CourseAnalyticsView, MarkContentCompleteView,UserCompletedContentView, UserProfileView
+from lms_core.views import CommentCreateView
 from lms_core.api import apiv1
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
@@ -62,7 +63,8 @@ urlpatterns = [
     path('courses/<int:course_id>/certificate/', CourseCertificateView.as_view(), name='course-certificate'),
     path('content/<int:content_id>/complete/', MarkContentCompleteView.as_view()),
     path('content/completed/', UserCompletedContentView.as_view()),
-
+    path('me/', UserProfileView.as_view()),
+    path('comments/', CommentCreateView.as_view(), name='create_comment'),
 
 ]
 
